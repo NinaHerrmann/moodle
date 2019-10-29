@@ -58,19 +58,11 @@ if ($mform_post->is_cancelled()) {
 } else if ($mform_post->get_data()) {
     echo $OUTPUT->header();
 
-    $csv_encode = '/\&\#44/';
-    if (isset($CFG->CSV_DELIMITER)) {
-        $csv_delimiter = $CFG->CSV_DELIMITER;
-
-        if (isset($CFG->CSV_ENCODE)) {
-            $csv_encode = '/\&\#' . $CFG->CSV_ENCODE . '/';
-        }
-    } else {
-        $csv_delimiter = ",";
-    }
-
     $text = $mform_post->get_file_content('userfile');
-    $text = preg_replace('!\r\n?!',"\n",$text);
+    $csvinformation = file_preprocess_csv($text);
+    $text = $csvinformation['text'];
+    $csvdelimiter = $csvinformation['delimiter'];
+    $csvencode = $csvinformation['encode'];
 
     $rawlines = explode("\n", $text);
     unset($text);
@@ -79,22 +71,22 @@ if ($mform_post->is_cancelled()) {
     $required = array("groupname" => 1);
     $optionalDefaults = array("lang" => 1);
     $optional = array("coursename" => 1,
-            "idnumber" => 1,
-            "groupidnumber" => 1,
-            "description" => 1,
-            "enrolmentkey" => 1,
-            "groupingname" => 1,
-            "enablemessaging" => 1,
-        );
+        "idnumber" => 1,
+        "groupidnumber" => 1,
+        "description" => 1,
+        "enrolmentkey" => 1,
+        "groupingname" => 1,
+        "enablemessaging" => 1,
+    );
 
     // --- get header (field names) ---
-    $header = explode($csv_delimiter, array_shift($rawlines));
+    $header = explode($csvdelimiter, array_shift($rawlines));
     // check for valid field names
     foreach ($header as $i => $h) {
         $h = trim($h); $header[$i] = $h; // remove whitespace
         if (!(isset($required[$h]) or isset($optionalDefaults[$h]) or isset($optional[$h]))) {
-                print_error('invalidfieldname', 'error', 'import.php?id='.$id, $h);
-            }
+            print_error('invalidfieldname', 'error', 'import.php?id='.$id, $h);
+        }
         if (isset($required[$h])) {
             $required[$h] = 2;
         }
@@ -115,10 +107,10 @@ if ($mform_post->is_cancelled()) {
         }
         //Note: commas within a field should be encoded as &#44 (for comma separated csv files)
         //Note: semicolon within a field should be encoded as &#59 (for semicolon separated csv files)
-        $line = explode($csv_delimiter, $rawline);
+        $line = explode($csvdelimiter, $rawline);
         foreach ($line as $key => $value) {
             //decode encoded commas
-            $record[$header[$key]] = preg_replace($csv_encode, $csv_delimiter, trim($value));
+            $record[$header[$key]] = preg_replace($csvencode, $csvdelimiter, trim($value));
         }
         if (trim($rawline) !== '') {
             // add a new group to the database

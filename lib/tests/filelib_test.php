@@ -734,6 +734,42 @@ class core_filelib_testcase extends advanced_testcase {
     }
 
     /**
+     * Test the prerocessing of CSV files:
+     * Removal of BOM Charaters and whitespaces coded as '/\xc2\xa0/'
+     * Checking global CFG CSV_DELIMITER and CSV_ENCODE variables.
+     */
+    public function test_file_preprocess_csv() {
+        global $CFG;
+        $this->resetAfterTest();
+        // Check if BOM is removed and standard delimiter and encoding.
+        $text = 'groupname,description;group1,testing group;group2,testing group;group3,testing group;';
+        $textutf8bom = chr(239) . chr(187) . chr(191) . $text;
+        $result = file_preprocess_csv($textutf8bom);
+        $this->assertEquals('groupname,description;group1,testing group;group2,testing group;group3,testing group;',
+            $result['text']);
+        $this->assertEquals(',', $result['delimiter']);
+        $this->assertEquals('/\&\#44/', $result['encode']);
+        // Check if whitespaces are removed and changing delimiter.
+        $CFG->CSV_DELIMITER = '.';
+        $unicodechar = '\xa0';
+        $unicodechardecode = json_decode('"' . $unicodechar . '"');
+        $textwhitespace = 'groupname.description;' . $unicodechardecode . 'group1.testing group;group2.'  .
+            $unicodechardecode . 'testing group;group3.testing group;';
+        $result = file_preprocess_csv($textwhitespace);
+        $this->assertEquals('groupname.description;group1.testing group;group2.testing group;group3.testing group;',
+            $result['text']);
+        $this->assertEquals('.', $result['delimiter']);
+        $this->assertEquals('/\&\#44/', $result['encode']);
+        // Check changing encoding.
+        $CFG->CSV_ENCODE = '54';
+        $result = file_preprocess_csv($text);
+        $this->assertEquals('groupname,description;group1,testing group;group2,testing group;group3,testing group;',
+            $result['text']);
+        $this->assertEquals('.', $result['delimiter']);
+        $this->assertEquals('/\&\#54/', $result['encode']);
+    }
+
+    /**
      * Testing deleting original files.
      *
      * @copyright 2012 Dongsheng Cai {@link http://dongsheng.org}

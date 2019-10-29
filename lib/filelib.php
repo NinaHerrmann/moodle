@@ -5014,5 +5014,30 @@ function file_pluginfile($relativepath, $forcedownload, $preview = null, $offlin
 
         send_file_not_found();
     }
+}
 
+/**
+ * This function proprocesses and checks a csv file.
+ * It removes BOM encoding and whitespaces.
+ *
+ * @param string $text
+ * @return array with text or amendet text, delimiter, and encoding,
+ */
+function file_preprocess_csv($text) {
+    global $CFG;
+    $csvencode = '/\&\#44/';
+    if (isset($CFG->CSV_DELIMITER)) {
+        $csvdelimiter = $CFG->CSV_DELIMITER;
+        if (isset($CFG->CSV_ENCODE)) {
+            $csvencode = '/\&\#' . $CFG->CSV_ENCODE . '/';
+        }
+    } else {
+        $csvdelimiter = ",";
+    }
+    $text = preg_replace('!\r\n?!', "\n", $text);
+    $bom = pack('H*', 'EFBBBF');
+    $text = preg_replace("/^$bom/", '', $text);
+    $text = preg_replace('/\xc2\xa0/', ' ', $text);
+    $csvinformation = array('text' => $text, 'delimiter' => $csvdelimiter, 'encode' => $csvencode);
+    return $csvinformation;
 }
